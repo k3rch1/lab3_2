@@ -1,0 +1,3 @@
+[submodule "subs/lab5"]
+	path = subs/lab5
+	url = https://github.com/k3rch1/lab5.git

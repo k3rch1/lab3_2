@@ -4,8 +4,13 @@
 #include <memory>
 #include <utility>
 #include <cmath>
+#include <stdexcept>
 #include "dictionary.hpp"
-//#include "array_sequence.hpp"
+#include "array_sequence.hpp"
+
+#define INIT_SIZE 0
+#define INIT_MIN_LOAD_FACTOR 0.25f
+#define INIT_MAX_LOAD_FACTOR 0.9375f
 
 template <typename key, typename value, typename hash = std::hash<key>, typename key_equal = std::equal_to<key>>
 class hash_table : public dictionary<key, value>
@@ -23,9 +28,9 @@ private:
 
     array_sequence<std::unique_ptr<node>> buckets_;
 
-    size_t size_ = 0;
-    float max_load_factor_ = 0.9375f;
-    float min_load_factor_ = 0.25f;
+    size_t size_ = INIT_SIZE;
+    float max_load_factor_ = INIT_MAX_LOAD_FACTOR;
+    float min_load_factor_ = INIT_MIN_LOAD_FACTOR;
 
     hash hash_;
     key_equal equal_;
@@ -34,15 +39,15 @@ private:
 
     size_t get_bucket_index(size_t hash_value) const;
 
-    node* find_node(const key& key, size_t hash_value);
-    const node* find_node(const key& key, size_t hash_value) const;
+    node* find_node(const key& key_, size_t hash_value);
+    const node* find_node(const key& key_, size_t hash_value) const;
 
     std::unique_ptr<node> clone_chain(const node* source) const;
 
 public:
     explicit hash_table(size_t bucket_count = 8, const hash& hash_func = hash{}, const key_equal& equal_func = key_equal{}) : buckets_(bucket_count == 0 ? 1 : bucket_count), hash_(hash_func), equal_(equal_func) {}
     hash_table(const hash_table& other);
-    hash_table(hash_table&& other) : buckets_(std::move(other.buckets_)), size_(std::exchange(other.size_, 0)), hash_(std::move(other.hash_)), equal_(std::move(other.equal_)), max_load_factor_(other.max_load_factor_), min_load_factor_(other.min_load_factor_) {};
+    hash_table(hash_table&& other) : buckets_(std::move(other.buckets_)), size_(std::exchange(other.size_, 0)), max_load_factor_(other.max_load_factor_), min_load_factor_(other.min_load_factor_), hash_(std::move(other.hash_)), equal_(std::move(other.equal_)) {}
 
     hash_table& operator=(const hash_table& other);
     hash_table& operator=(hash_table&& other);
@@ -52,14 +57,14 @@ public:
     bool insert(const std::pair<const key, value>& item) override;
     bool insert(std::pair<const key, value>&& item) override;
 
-    bool erase(const key& key) override;
+    bool erase(const key& key_) override;
 
-    bool contains(const key& key) const override;
+    bool contains(const key& key_) const override;
 
-    value& at(const key& key) override;
-    const value& at(const key& key) const override;
+    value& at(const key& key_) override;
+    const value& at(const key& key_) const override;
 
-    value& operator[](const key& key);
+    value& operator[](const key& key_);
 
     size_t size() const noexcept override;
     bool empty() const noexcept override;
@@ -166,21 +171,20 @@ bool hash_table<key, value, hash, key_equal>::insert(std::pair<const key, value>
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
-bool hash_table<key, value, hash, key_equal>::erase(const key& key) {
+bool hash_table<key, value, hash, key_equal>::erase(const key& key_) {
     if (size_ == 0 || buckets_.size() == 0) return false;
 
-    size_t hash_value = hash_(key);
+    size_t hash_value = hash_(key_);
     size_t index = get_bucket_index(hash_value);
 
     std::unique_ptr<node>* current = &buckets_[index];
 
     while (*current) {
-        if ((*current)->hash_ == hash_value && equal_((*current)->value_.first, key)) {
+        if ((*current)->hash_ == hash_value && equal_((*current)->value_.first, key_)) {
             *current = std::move((*current)->next);
             --size_;
 
-            if (buckets_.size() > 1 && static_cast<float>(size_) / buckets_.size() < min_load_factor_)
-                rehash(buckets_.size() / 2);
+            if (buckets_.size() > 1 && static_cast<float>(size_) / buckets_.size() <= min_load_factor_) rehash(buckets_.size() / 2);
 
             return true;
         }
@@ -192,45 +196,19 @@ bool hash_table<key, value, hash, key_equal>::erase(const key& key) {
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
-bool hash_table<key, value, hash, key_equal>::erase(const key& key) {
+bool hash_table<key, value, hash, key_equal>::contains(const key& key_) const {
     if (size_ == 0 || buckets_.size() == 0) return false;
+    size_t hash_value = hash_(key_);
 
-    size_t hash_value = hash_(key);
-    size_t index = get_bucket_index(hash_value);
-
-    std::unique_ptr<node>* current = &buckets_[index];
-
-    while (*current) {
-        if ((*current)->hash_ == hash_value && equal_((*current)->value_.first, key)) {
-            *current = std::move((*current)->next);
-            --size_;
-
-            if (buckets_.size() > 1 && static_cast<float>(size_) / buckets_.size() < min_load_factor_)
-                rehash(buckets_.size() / 2);
-
-            return true;
-        }
-
-        current = &((*current)->next);
-    }
-
-    return false;
+    return find_node(key_, hash_value) != nullptr;
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
-bool hash_table<key, value, hash, key_equal>::contains(const key& key) const {
-    if (size_ == 0 || buckets_.size() == 0) return false;
-    size_t hash_value = hash_(key);
-
-    return find_node(key, hash_value) != nullptr;
-}
-
-template <typename key, typename value, typename hash, typename key_equal>
-value& hash_table<key, value, hash, key_equal>::at(const key& key) {
+value& hash_table<key, value, hash, key_equal>::at(const key& key_) {
     if (size_ == 0 || buckets_.size() == 0) throw std::out_of_range("key not found");
 
-    size_t hash_value = hash_(key);
-    node* current = find_node(key, hash_value);
+    size_t hash_value = hash_(key_);
+    node* current = find_node(key_, hash_value);
 
     if (!current) throw std::out_of_range("key not found");
 
@@ -238,11 +216,11 @@ value& hash_table<key, value, hash, key_equal>::at(const key& key) {
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
-const value& hash_table<key, value, hash, key_equal>::at(const key& key) const {
+const value& hash_table<key, value, hash, key_equal>::at(const key& key_) const {
     if (size_ == 0 || buckets_.size() == 0) throw std::out_of_range("key not found");
 
-    size_t hash_value = hash_(key);
-    const node* current = find_node(key, hash_value);
+    size_t hash_value = hash_(key_);
+    const node* current = find_node(key_, hash_value);
 
     if (!current) throw std::out_of_range("key not found");
 
@@ -250,15 +228,15 @@ const value& hash_table<key, value, hash, key_equal>::at(const key& key) const {
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
-value& hash_table<key, value, hash, key_equal>::operator[](const key& key) {
-    size_t hash_value = hash_(key);
-    node* current = find_node(key, hash_value);
+value& hash_table<key, value, hash, key_equal>::operator[](const key& key_) {
+    size_t hash_value = hash_(key_);
+    node* current = find_node(key_, hash_value);
 
     if (current) return current->value_.second;
 
-    insert(std::pair<const key, value>(key, value{}));
+    insert(std::pair<const key, value>(key_, value{}));
 
-    return find_node(key, hash_value)->value_.second;
+    return find_node(key_, hash_value)->value_.second;
 }
 
 template <typename key, typename value, typename hash, typename key_equal>
@@ -370,12 +348,12 @@ size_t hash_table<key, value, hash, key_equal>::get_bucket_index(size_t hash_val
 
 template <typename key, typename value, typename hash, typename key_equal>
 typename hash_table<key, value, hash, key_equal>::node*
-hash_table<key, value, hash, key_equal>::find_node(const key& key, size_t hash_value) {
+hash_table<key, value, hash, key_equal>::find_node(const key& key_, size_t hash_value) {
     if (buckets_.size() == 0) return nullptr;
     node* current = buckets_[get_bucket_index(hash_value)].get();
 
     while (current) {
-        if (current->hash_ == hash_value && equal_(current->value_.first, key)) return current;
+        if (current->hash_ == hash_value && equal_(current->value_.first, key_)) return current;
         current = current->next.get();
     }
 
@@ -384,12 +362,12 @@ hash_table<key, value, hash, key_equal>::find_node(const key& key, size_t hash_v
 
 template <typename key, typename value, typename hash, typename key_equal>
 const typename hash_table<key, value, hash, key_equal>::node*
-hash_table<key, value, hash, key_equal>::find_node(const key& key, size_t hash_value) const {
+hash_table<key, value, hash, key_equal>::find_node(const key& key_, size_t hash_value) const {
     if (buckets_.size() == 0) return nullptr;
     const node* current = buckets_[get_bucket_index(hash_value)].get();
 
     while (current) {
-        if (current->hash_ == hash_value && equal_(current->value_.first, key)) return current;
+        if (current->hash_ == hash_value && equal_(current->value_.first, key_)) return current;
         current = current->next.get();
     }
 
