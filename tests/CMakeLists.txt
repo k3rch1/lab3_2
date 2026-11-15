@@ -9,6 +9,9 @@ add_executable(
     tests
     hash_table_tests.cpp
     game_state_tests.cpp
+    ${CMAKE_SOURCE_DIR}/src/game/game_state.cpp
+    game_solver_tests.cpp
+    ${CMAKE_SOURCE_DIR}/src/game/game_solver.cpp
 )
 
 target_include_directories(tests PRIVATE
