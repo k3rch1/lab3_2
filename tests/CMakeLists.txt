@@ -8,6 +8,7 @@ enable_testing()
 add_executable(
     tests
     hash_table_tests.cpp
+    game_state_tests.cpp
 )
 
 target_include_directories(tests PRIVATE
