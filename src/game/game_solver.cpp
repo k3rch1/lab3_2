@@ -76,34 +76,33 @@ long long game_solver::evaluate(const game_state& state) const {
                 int dir_row = direction[0];
                 int dir_col = direction[1];
 
-                bool fits = (dir_row == 0 || row <= board_size - win_length) && (dir_col == 0 || (dir_col == 1 && col <= board_size - win_length) || (dir_col == -1 && col >= win_length - 1));
-                if (!fits) continue;
+                if ((dir_row == 0 || row <= board_size - win_length) && (dir_col == 0 || (dir_col == 1 && col <= board_size - win_length) || (dir_col == -1 && col >= win_length - 1))) {
+                    size_t x_count = 0;
+                    size_t o_count = 0;
 
-                size_t x_count = 0;
-                size_t o_count = 0;
+                    for (size_t i = 0; i < win_length; ++i) {
+                        size_t r = row + (dir_row == 1 ? i : 0);
+                        size_t c = col;
 
-                for (size_t i = 0; i < win_length; ++i) {
-                    size_t r = row + (dir_row == 1 ? i : 0);
-                    size_t c = col;
+                        if (dir_col == 1) c += i;
+                        else if (dir_col == -1) c -= i;
 
-                    if (dir_col == 1) c += i;
-                    else if (dir_col == -1) c -= i;
+                        cell value = state.get_cell(r, c);
 
-                    cell value = state.get_cell(r, c);
+                        if (value == cell::x) ++x_count;
+                        else if (value == cell::o) ++o_count;
+                    }
 
-                    if (value == cell::x) ++x_count;
-                    else if (value == cell::o) ++o_count;
+                    if (x_count > 0 && o_count > 0) continue;
+
+                    size_t count = x_count + o_count;
+                    long long weight = 1;
+
+                    for (size_t i = 0; i < count; ++i) weight *= win_length;
+
+                    if (o_count > 0) score += weight;
+                    else if (x_count > 0) score -= weight;
                 }
-
-                if (x_count > 0 && o_count > 0) continue;
-
-                size_t count = x_count + o_count;
-                long long weight = 1;
-
-                for (size_t i = 0; i < count; ++i) weight *= win_length;
-
-                if (o_count > 0) score += weight;
-                else if (x_count > 0) score -= weight;
             }
         }
     }
@@ -122,21 +121,6 @@ long long game_solver::minimax(const game_state& state, size_t depth, long long 
         return score;
     }
 
-    long long alpha_original = alpha;
-    long long beta_original = beta;
-
-    if (table_.contains(state)) {
-        const transposition_entry& entry = table_.at(state);
-
-        if (entry.depth >= depth) {
-            if (entry.bound == bound_type::exact) return entry.score;
-            else if (entry.bound == bound_type::lower_bound) alpha = std::max(alpha, entry.score);
-            else if (entry.bound == bound_type::upper_bound) beta = std::min(beta, entry.score);
-
-            if (alpha >= beta) return entry.score;
-        }
-    }
-
     if (depth == 0) return evaluate(state);
 
     array_sequence<game_move> moves = generate_moves(state);
@@ -144,7 +128,6 @@ long long game_solver::minimax(const game_state& state, size_t depth, long long 
     if (moves.empty()) return evaluate(state);
 
     bool maximizing = state.get_current_player() == player::o;
-
     long long best_score = maximizing ? std::numeric_limits<long long>::lowest() : std::numeric_limits<long long>::max();
 
     for (size_t i = 0; i < moves.size(); ++i) {
@@ -163,12 +146,6 @@ long long game_solver::minimax(const game_state& state, size_t depth, long long 
         if (beta <= alpha) break;
     }
 
-    bound_type bound = bound_type::exact;
-    if (best_score <= alpha_original) bound = bound_type::upper_bound;
-    else if (best_score >= beta_original) bound = bound_type::lower_bound;
-
-    if (!table_.contains(state) || table_.at(state).depth <= depth)  table_[state] = transposition_entry{best_score, depth, bound};
-
     return best_score;
 }
 
@@ -178,12 +155,10 @@ game_move game_solver::get_best_move(const game_state& state) {
     array_sequence<game_move> moves = generate_moves(state);
     if (moves.empty()) throw std::logic_error("No available moves");
 
-    table_.clear();
-
     long long alpha = std::numeric_limits<long long>::lowest();
     long long beta = std::numeric_limits<long long>::max();
 
-    size_t search_depth = state.get_win_length();
+    size_t search_depth = 3;
     bool maximizing = state.get_current_player() == player::o;
 
     long long best_score = maximizing ? std::numeric_limits<long long>::lowest() : std::numeric_limits<long long>::max();

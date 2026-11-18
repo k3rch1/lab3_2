@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdexcept>
-#include "array_sequence.hpp"
+#include "hash_table.hpp"
 
 enum class cell {
     empty,
@@ -29,7 +29,7 @@ struct game_move {
 class game_state
 {
 private:
-    array_sequence<cell> board_;
+    hash_table<size_t, cell> board_;
     size_t board_size_;
     size_t win_length_;
     game_result result_;
@@ -40,7 +40,7 @@ private:
 public:
     explicit game_state(size_t board_size, size_t win_length);
 
-    game_state(const array_sequence<cell>& board, size_t board_size, size_t win_length);
+    game_state(const hash_table<size_t, cell>& board, size_t board_size, size_t win_length);
 
     game_state(const game_state& other) = default;
     game_state(game_state&& other) noexcept = default;

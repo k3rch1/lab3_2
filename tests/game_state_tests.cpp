@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "game_state.hpp"
+#include "hash_table.hpp"
 
 TEST(game_state, empty_constructor) {
     game_state state(3, 3);
@@ -30,162 +31,182 @@ TEST(game_state, win_length_exceeds_board_size) {
 }
 
 TEST(game_state, incorrect_board_size) {
-    const array_sequence<cell> board{
-        cell::x, cell::o
-    };
+    hash_table<size_t, cell> board;
+
+    board[0] = cell::x;
+    board[1] = cell::o;
+    board[2] = cell::x;
+    board[3] = cell::o;
+    board[4] = cell::x;
+    board[5] = cell::o;
+    board[6] = cell::x;
+    board[7] = cell::o;
+    board[8] = cell::x;
+    board[9] = cell::o;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
 
 TEST(game_state, invalid_cell_value) {
-    const array_sequence<cell> board{
-        static_cast<cell>(42),
-        cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    hash_table<size_t, cell> board;
+    board[0] = static_cast<cell>(42);
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
 
 TEST(game_state, more_o_than_x) {
-    const array_sequence<cell> board{
-        cell::o, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    hash_table<size_t, cell> board;
+    board[0] = cell::o;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
 
 TEST(game_state, too_many_x) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::empty,
-        cell::empty, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    hash_table<size_t, cell> board;
+    board[0] = cell::x;
+    board[1] = cell::x;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
 
 TEST(game_state, x_wins_horizontal) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::x,
-        cell::o, cell::o, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({1, 0}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({0, 2}); // X wins
+
     EXPECT_EQ(state.get_result(), game_result::x_wins);
 }
 
 TEST(game_state, x_wins_vertical) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::empty,
-        cell::x, cell::o, cell::empty,
-        cell::x, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({1, 0}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({2, 0}); // X wins
+
     EXPECT_EQ(state.get_result(), game_result::x_wins);
 }
 
 TEST(game_state, x_wins_main_diagonal) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::empty,
-        cell::empty, cell::x, cell::o,
-        cell::empty, cell::empty, cell::x
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({1, 1}); // X
+    state = state.make_move({1, 2}); // O
+    state = state.make_move({2, 2}); // X wins
+
     EXPECT_EQ(state.get_result(), game_result::x_wins);
 }
 
 TEST(game_state, x_wins_anti_diagonal) {
-    const array_sequence<cell> board{
-        cell::empty, cell::o, cell::x,
-        cell::empty, cell::x, cell::o,
-        cell::x, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 2}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({1, 1}); // X
+    state = state.make_move({1, 2}); // O
+    state = state.make_move({2, 0}); // X wins
+
     EXPECT_EQ(state.get_result(), game_result::x_wins);
 }
 
 TEST(game_state, o_wins_horizontal) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::empty,
-        cell::o, cell::o, cell::o,
-        cell::x, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({1, 0}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({2, 0}); // X
+    state = state.make_move({1, 2}); // O wins
+
     EXPECT_EQ(state.get_result(), game_result::o_wins);
 }
 
 TEST(game_state, o_wins_vertical) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::x,
-        cell::empty, cell::o, cell::empty,
-        cell::x, cell::o, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({0, 2}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({2, 0}); // X
+    state = state.make_move({2, 1}); // O wins
+
     EXPECT_EQ(state.get_result(), game_result::o_wins);
 }
 
 TEST(game_state, o_wins_main_diagonal) {
-    const array_sequence<cell> board{
-        cell::o, cell::x, cell::x,
-        cell::x, cell::o, cell::empty,
-        cell::empty, cell::empty, cell::o
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({0, 0}); // O
+    state = state.make_move({0, 2}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({1, 0}); // X
+    state = state.make_move({2, 2}); // O wins
+
     EXPECT_EQ(state.get_result(), game_result::o_wins);
 }
 
 TEST(game_state, o_wins_anti_diagonal) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::o,
-        cell::x, cell::o, cell::empty,
-        cell::o, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 2}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({1, 0}); // X
+    state = state.make_move({2, 0}); // O wins
+
     EXPECT_EQ(state.get_result(), game_result::o_wins);
 }
 
 TEST(game_state, draw) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::x,
-        cell::x, cell::o, cell::o,
-        cell::o, cell::x, cell::x
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({0, 2}); // X
+    state = state.make_move({1, 2}); // O
+    state = state.make_move({1, 0}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({2, 1}); // X
+    state = state.make_move({2, 0}); // O
+    state = state.make_move({2, 2}); // X; draw
+
     EXPECT_EQ(state.get_result(), game_result::draw);
     EXPECT_TRUE(state.is_terminal());
 }
 
 TEST(game_state, game_in_progress) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::empty,
-        cell::empty, cell::x, cell::empty,
-        cell::empty, cell::empty, cell::o
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({1, 1}); // X
+    state = state.make_move({2, 2}); // O
+
     EXPECT_EQ(state.get_result(), game_result::in_progress);
     EXPECT_FALSE(state.is_terminal());
 }
 
 TEST(game_state, both_players_cannot_win) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::x,
-        cell::o, cell::o, cell::o,
-        cell::empty, cell::empty, cell::empty
-    };
+    hash_table<size_t, cell> board;
+
+    board[0] = cell::x;
+    board[1] = cell::x;
+    board[2] = cell::x;
+    board[3] = cell::o;
+    board[4] = cell::o;
+    board[5] = cell::o;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
@@ -201,13 +222,13 @@ TEST(game_state, current_player_changes_after_move) {
 }
 
 TEST(game_state, available_moves) {
-    const array_sequence<cell> board{
-        cell::x, cell::o, cell::empty,
-        cell::empty, cell::x, cell::empty,
-        cell::o, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({0, 1}); // O
+    state = state.make_move({1, 1}); // X
+    state = state.make_move({2, 0}); // O
+
     auto moves = state.get_available_moves();
 
     ASSERT_EQ(moves.size(), 5);
@@ -229,13 +250,13 @@ TEST(game_state, available_moves) {
 }
 
 TEST(game_state, no_available_moves_after_win) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::x,
-        cell::o, cell::o, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({1, 0}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({0, 2}); // X wins
 
     EXPECT_TRUE(state.get_available_moves().empty());
 }
@@ -253,14 +274,14 @@ TEST(game_state, make_move_does_not_modify_original) {
 }
 
 TEST(game_state, winning_move_finishes_game) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::empty,
-        cell::o, cell::o, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
-    auto next = state.make_move({0, 2});
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({1, 0}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+
+    auto next = state.make_move({0, 2}); // X wins
 
     EXPECT_EQ(next.get_result(), game_result::x_wins);
     EXPECT_TRUE(next.is_terminal());
@@ -282,25 +303,20 @@ TEST(game_state, make_move_out_of_range) {
 }
 
 TEST(game_state, make_move_occupied_cell) {
-    const array_sequence<cell> board{
-        cell::x, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
-
-    game_state state(board, 3, 3);
+    game_state state(3, 3);
+    state = state.make_move({0, 0}); // X
 
     EXPECT_THROW(state.make_move({0, 0}), std::invalid_argument);
 }
 
 TEST(game_state, make_move_after_game_finished) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::x,
-        cell::o, cell::o, cell::empty,
-        cell::empty, cell::empty, cell::empty
-    };
+    game_state state(3, 3);
 
-    game_state state(board, 3, 3);
+    state = state.make_move({0, 0}); // X
+    state = state.make_move({1, 0}); // O
+    state = state.make_move({0, 1}); // X
+    state = state.make_move({1, 1}); // O
+    state = state.make_move({0, 2}); // X wins
 
     EXPECT_THROW(state.make_move({2, 2}), std::logic_error);
 }
@@ -335,21 +351,31 @@ TEST(game_state, copy_constructor) {
 }
 
 TEST(game_state, x_cannot_win_when_counts_are_equal) {
-    const array_sequence<cell> board{
-        cell::x, cell::x, cell::x,
-        cell::o, cell::o, cell::empty,
-        cell::o, cell::empty, cell::empty
-    };
+    hash_table<size_t, cell> board;
+
+    board[0] = cell::x;
+    board[1] = cell::x;
+    board[2] = cell::x;
+
+    board[3] = cell::o;
+    board[4] = cell::o;
+    board[6] = cell::o;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }
 
 TEST(game_state, o_cannot_win_when_x_count_is_greater) {
-    const array_sequence<cell> board{
-        cell::x, cell::empty, cell::x,
-        cell::o, cell::o, cell::o,
-        cell::x, cell::empty, cell::x
-    };
+    hash_table<size_t, cell> board;
+
+    board[0] = cell::x;
+    board[2] = cell::x;
+
+    board[3] = cell::o;
+    board[4] = cell::o;
+    board[5] = cell::o;
+
+    board[6] = cell::x;
+    board[8] = cell::x;
 
     EXPECT_THROW(game_state(board, 3, 3), std::invalid_argument);
 }

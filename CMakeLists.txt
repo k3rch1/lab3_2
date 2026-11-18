@@ -19,10 +19,14 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/subs/lab5)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/tests)
 
-#[[add_executable(gui 
+add_executable(gui 
     src/main.cpp
     src/gui/main_window.cpp
     include/main_window.hpp
+    include/game_state.hpp
+    src/game/game_state.cpp
+    include/game_solver.hpp
+    src/game/game_solver.cpp
 )
 
 target_include_directories(gui PRIVATE include)
@@ -30,5 +34,4 @@ target_include_directories(gui PRIVATE include)
 target_link_libraries(gui PRIVATE 
     Qt6::Widgets
     lab5
-    lab6
-)]]
+)
