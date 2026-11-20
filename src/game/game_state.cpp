@@ -41,18 +41,19 @@ void game_state::update_result() {
         {1, -1}
     };
 
+    size_t valid_entry_count = 0;
     size_t x_count = 0;
     size_t o_count = 0;
 
     for (size_t row = 0; row < board_size_; ++row) {
         for (size_t col = 0; col < board_size_; ++col) {
             cell value = get_cell(row, col);
-
             if (value == cell::empty) {
                 has_empty = true;
                 continue;
             }
 
+            ++valid_entry_count;
             if (value == cell::x) ++x_count;
             else ++o_count;
 
@@ -97,6 +98,7 @@ void game_state::update_result() {
     if (x_wins && o_wins) throw std::invalid_argument("Both players cannot win");
     if (x_wins && x_count != o_count + 1) throw std::invalid_argument("Invalid X winning state");
     if (o_wins && x_count != o_count) throw std::invalid_argument("Invalid O winning state");
+    if (valid_entry_count != board_.size()) throw std::invalid_argument("Invalid board index");
 
     if (x_wins) result_ = game_result::x_wins;
     else if (o_wins) result_ = game_result::o_wins;

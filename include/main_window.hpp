@@ -38,6 +38,7 @@ private:
 
     QPushButton* start_button;
     QPushButton* exit_button;
+    QPushButton* mode_button;
 
     QWidget* board_widget;
     QGridLayout* board_layout;
@@ -46,6 +47,4 @@ private:
     bool has_last_move_ = false;
 
     void redraw_workspace();
-
-    //void resizeEvent(QResizeEvent* event) override;
 };

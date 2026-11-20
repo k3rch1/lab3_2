@@ -20,12 +20,14 @@ MainWindow::MainWindow() {
     win_length_slider->setValue(3);
 
     start_button = new QPushButton("Start", menu_controls);
+    mode_button = new QPushButton("Mode: Classic", menu_controls);
 
     menu_layout->addWidget(board_size_label);
     menu_layout->addWidget(board_size_slider);
     menu_layout->addWidget(win_length_label);
     menu_layout->addWidget(win_length_slider);
     menu_layout->addWidget(start_button);
+    menu_layout->addWidget(mode_button);
     menu_layout->addStretch();
 
     game_controls = new QWidget(workspace);
@@ -41,8 +43,6 @@ MainWindow::MainWindow() {
     game_controls->hide();
 
     board_widget = new QWidget(workspace);
-    /*int side = std::min(width(), height());
-    board_widget->setFixedSize(side, side);*/
 
     board_layout = new QGridLayout(board_widget);
     board_layout->setSpacing(4);
@@ -75,6 +75,18 @@ MainWindow::MainWindow() {
         game_controls->show();
 
         has_last_move_ = false;
+
+        redraw_workspace();
+    });
+
+    connect(mode_button, &QPushButton::clicked, this, [this]() {
+        if (solver_.depth() == 3) {
+            solver_.depth(size_t(2));
+            mode_button->setText("Mode: Blitz");
+        } else if (solver_.depth() == 2) {
+            solver_.depth(size_t(3));
+            mode_button->setText("Mode: Classic");
+        }
 
         redraw_workspace();
     });

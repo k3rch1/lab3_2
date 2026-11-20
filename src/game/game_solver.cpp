@@ -158,7 +158,7 @@ game_move game_solver::get_best_move(const game_state& state) {
     long long alpha = std::numeric_limits<long long>::lowest();
     long long beta = std::numeric_limits<long long>::max();
 
-    size_t search_depth = 3;
+    size_t search_depth = depth_;
     bool maximizing = state.get_current_player() == player::o;
 
     long long best_score = maximizing ? std::numeric_limits<long long>::lowest() : std::numeric_limits<long long>::max();
@@ -179,4 +179,12 @@ game_move game_solver::get_best_move(const game_state& state) {
     }
 
     return best_move;
+}
+
+void game_solver::depth(size_t value) {
+    depth_ = value;
+}
+
+size_t game_solver::depth() {
+    return depth_;
 }
